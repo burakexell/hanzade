@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Burak Bilgisayar Kursu — Hanzade</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;0,900;1,600&family=Special+Elite&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #f3ecda;
+    --paper-shadow: #e6dcc2;
+    --ink: #2a2118;
+    --burgundy: #7a2431;
+    --burgundy-deep: #59161f;
+    --gold: #b8912f;
+    --gold-light: #d9b95c;
+    --sage: #4b5e45;
+  }
+
+  *{ box-sizing: border-box; }
+
+  html, body{
+    margin: 0;
+    padding: 0;
+    background: var(--ink);
+    color: var(--ink);
+    font-family: 'Special Elite', monospace;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .screen{
+    min-height: 100svh;
+    width: 100%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    position: relative;
+    padding: 24px;
+  }
+  .screen.active{ display: flex; }
+
+  /* ---------- SCREEN 1: LOADING ---------- */
+  #loading{ background: var(--ink); }
+
+  .seal-spin{
+    width: clamp(70px, 18vw, 100px);
+    height: clamp(70px, 18vw, 100px);
+    margin-bottom: 28px;
+    animation: spin 2.6s linear infinite;
+  }
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+
+  .loading-title{
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    color: var(--gold-light);
+    font-size: clamp(18px, 4.5vw, 24px);
+    letter-spacing: 0.04em;
+    margin: 0 0 18px;
+    text-align: center;
+  }
+
+  .loading-line{
+    color: #cfc6ae;
+    font-size: clamp(12px, 3.2vw, 14px);
+    min-height: 20px;
+    text-align: center;
+    opacity: 0.9;
+  }
+
+  .progress-track{
+    width: min(280px, 70vw);
+    height: 3px;
+    background: #453a2c;
+    border-radius: 2px;
+    margin-top: 22px;
+    overflow: hidden;
+  }
+  .progress-fill{
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--gold), var(--gold-light));
+    transition: width 0.25s ease;
+  }
+
+  /* ---------- SCREEN 1.5: QUIZ ---------- */
+  #quiz{ background: var(--ink); align-items: center; }
+
+  .quiz-wrap{
+    width: 100%;
+    max-width: 460px;
+  }
+
+  .quiz-dots{
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 22px;
+  }
+  .quiz-dot{
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #453a2c;
+    transition: background 0.3s ease, transform 0.3s ease;
+  }
+  .quiz-dot.done{ background: var(--gold); }
+  .quiz-dot.current{ background: var(--gold-light); transform: scale(1.3); }
+
+  .quiz-eyebrow{
+    text-align: center;
+    color: var(--gold);
+    font-size: clamp(9.5px, 2.6vw, 11px);
+    letter-spacing: 0.2em;
+    margin-bottom: 10px;
+  }
+
+  .quiz-question{
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    color: var(--paper);
+    font-size: clamp(18px, 5vw, 24px);
+    text-align: center;
+    line-height: 1.4;
+    margin: 0 0 26px;
+  }
+
+  .quiz-options{
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .quiz-option{
+    font-family: 'Special Elite', monospace;
+    text-align: left;
+    background: rgba(243,236,218,0.04);
+    border: 1.5px solid #4a4130;
+    color: #e9e1cc;
+    padding: 14px 16px;
+    font-size: clamp(12.5px, 3.4vw, 14px);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+  }
+  .quiz-option:hover{ border-color: var(--gold); background: rgba(184,145,47,0.08); }
+  .quiz-option:focus-visible{ outline: 2px solid var(--gold-light); outline-offset: 2px; }
+  .quiz-option.correct{ border-color: var(--sage); background: rgba(75,94,69,0.18); }
+  .quiz-option.wrong{ border-color: var(--burgundy); background: rgba(122,36,49,0.15); }
+  .quiz-option:disabled{ cursor: default; transform: none; }
+
+  .quiz-feedback{
+    margin-top: 18px;
+    min-height: 44px;
+    text-align: center;
+    font-size: clamp(12.5px, 3.2vw, 14px);
+    color: var(--gold-light);
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  .quiz-feedback.show{
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.35s ease, transform 0.35s ease;
+  }
+
+  .quiz-next{
+    display: block;
+    margin: 22px auto 0;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .quiz-next.show{
+    opacity: 1;
+    pointer-events: auto;
+    animation: fadeUp 0.4s ease forwards;
+  }
+
+  /* ---------- SCREEN 2: REVEAL ---------- */
+  #reveal{ background: radial-gradient(ellipse at center, #241c14 0%, #140f0a 100%); text-align: center; }
+
+  .reveal-eyebrow{
+    color: var(--gold-light);
+    letter-spacing: 0.25em;
+    font-size: clamp(10px, 2.8vw, 12px);
+    margin-bottom: 14px;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.1s;
+  }
+
+  .reveal-title{
+    font-family: 'Playfair Display', serif;
+    font-weight: 900;
+    font-style: italic;
+    color: var(--paper);
+    font-size: clamp(32px, 9vw, 58px);
+    line-height: 1.05;
+    margin: 0 0 18px;
+    opacity: 0;
+    animation: fadeUp 0.7s ease forwards 0.35s;
+  }
+
+  .reveal-sub{
+    color: #cfc6ae;
+    max-width: 460px;
+    font-size: clamp(13px, 3.4vw, 15px);
+    line-height: 1.7;
+    margin: 0 0 32px;
+    opacity: 0;
+    animation: fadeUp 0.7s ease forwards 0.65s;
+  }
+
+  @keyframes fadeUp{
+    from{ opacity: 0; transform: translateY(14px); }
+    to{ opacity: 1; transform: translateY(0); }
+  }
+
+  .btn{
+    font-family: 'Special Elite', monospace;
+    background: transparent;
+    border: 1.5px solid var(--gold);
+    color: var(--gold-light);
+    padding: 14px 30px;
+    font-size: clamp(13px, 3.4vw, 15px);
+    letter-spacing: 0.08em;
+    border-radius: 2px;
+    cursor: pointer;
+    opacity: 0;
+    animation: fadeUp 0.7s ease forwards 0.95s;
+    transition: background 0.25s ease, color 0.25s ease;
+  }
+  .btn:hover{ background: var(--gold); color: var(--ink); }
+  .btn:focus-visible{ outline: 2px solid var(--gold-light); outline-offset: 3px; }
+
+  #confetti-canvas{
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  /* ---------- SCREEN 3: CERTIFICATE ---------- */
+  #certificate{
+    background:
+      radial-gradient(ellipse at top left, #3a2f22 0%, transparent 60%),
+      var(--ink);
+    padding: 20px 14px 48px;
+    align-items: flex-start;
+  }
+
+  .cert-wrap{
+    width: 100%;
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  .cert-frame{
+    position: relative;
+    background:
+      repeating-linear-gradient(0deg, transparent 0 2px, rgba(0,0,0,0.015) 2px 4px),
+      var(--paper);
+    border: 2px solid var(--burgundy);
+    padding: clamp(18px, 5vw, 40px);
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.6), inset 0 0 0 6px var(--paper),
+                inset 0 0 0 8px var(--gold);
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  .cert-frame.show{
+    animation: certIn 0.6s cubic-bezier(.2,.8,.3,1) forwards;
+  }
+  @keyframes certIn{ to{ opacity: 1; transform: scale(1); } }
+
+  .cert-frame::before{
+    content: "";
+    position: absolute;
+    inset: 10px;
+    border: 1px solid var(--gold);
+    pointer-events: none;
+  }
+
+  .corner{
+    position: absolute;
+    width: clamp(26px, 6vw, 40px);
+    height: clamp(26px, 6vw, 40px);
+    border: 2px solid var(--gold);
+  }
+  .corner.tl{ top: 4px; left: 4px; border-right: none; border-bottom: none; }
+  .corner.tr{ top: 4px; right: 4px; border-left: none; border-bottom: none; }
+  .corner.bl{ bottom: 4px; left: 4px; border-right: none; border-top: none; }
+  .corner.br{ bottom: 4px; right: 4px; border-left: none; border-top: none; }
+
+  .cert-office{
+    text-align: center;
+    color: var(--burgundy-deep);
+    font-size: clamp(9.5px, 2.6vw, 11px);
+    letter-spacing: 0.12em;
+    line-height: 1.6;
+    margin-bottom: 18px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .cert-emblem{
+    width: clamp(34px, 8vw, 46px);
+    height: auto;
+    display: block;
+    margin: 0 auto 10px;
+  }
+
+  .cert-title{
+    font-family: 'Playfair Display', serif;
+    font-weight: 900;
+    text-align: center;
+    color: var(--burgundy);
+    font-size: clamp(22px, 6.4vw, 36px);
+    letter-spacing: 0.02em;
+    margin: 6px 0 4px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .cert-subtitle{
+    text-align: center;
+    color: var(--gold);
+    font-size: clamp(10px, 2.8vw, 12.5px);
+    letter-spacing: 0.18em;
+    margin-bottom: 26px;
+  }
+
+  .cert-divider{
+    width: 90px;
+    height: 2px;
+    background: var(--gold);
+    margin: 0 auto 26px;
+    position: relative;
+  }
+  .cert-divider::before, .cert-divider::after{
+    content: "◆";
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gold);
+    font-size: 8px;
+  }
+  .cert-divider::before{ left: -14px; }
+  .cert-divider::after{ right: -14px; }
+
+  .cert-body p{
+    font-size: clamp(12.5px, 3.2vw, 14.5px);
+    line-height: 1.85;
+    color: var(--ink);
+    text-align: center;
+    margin: 0 0 22px;
+  }
+  .cert-body .name{
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    color: var(--burgundy);
+    font-size: clamp(30px, 8vw, 42px);
+    display: block;
+    margin: 4px 0 10px;
+  }
+
+  .madde-list{
+    list-style: none;
+    padding: 0;
+    margin: 0 0 26px;
+    border-top: 1px dashed #c9bd9e;
+    border-bottom: 1px dashed #c9bd9e;
+    padding: 16px 0;
+  }
+  .madde-list li{
+    font-size: clamp(11.5px, 3vw, 13px);
+    line-height: 1.7;
+    color: #3a2f22;
+    margin-bottom: 10px;
+    padding-left: 1.6em;
+    position: relative;
+  }
+  .madde-list li:last-child{ margin-bottom: 0; }
+  .madde-list b{
+    color: var(--burgundy);
+    position: absolute;
+    left: 0;
+    font-size: 0.9em;
+  }
+
+  .cert-footer{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-top: 30px;
+    position: relative;
+  }
+
+  .footer-block{
+    flex: 1 1 140px;
+    min-width: 140px;
+  }
+  .footer-label{
+    font-size: 9.5px;
+    letter-spacing: 0.1em;
+    color: var(--gold);
+    margin-bottom: 4px;
+  }
+  .footer-value{
+    font-size: clamp(11px, 2.8vw, 12.5px);
+    color: var(--ink);
+    border-top: 1px solid var(--ink);
+    padding-top: 4px;
+  }
+  .footer-sign{
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    font-size: clamp(22px, 5vw, 28px);
+    color: var(--burgundy-deep);
+  }
+
+  .seal{
+    position: absolute;
+    right: clamp(4px, 4vw, 20px);
+    bottom: clamp(60px, 12vw, 80px);
+    width: clamp(72px, 18vw, 108px);
+    height: clamp(72px, 18vw, 108px);
+    opacity: 0;
+    transform: scale(2.6) rotate(-18deg);
+    transform-origin: center;
+  }
+  .seal.stamp{
+    animation: stampDown 0.35s cubic-bezier(.2,.9,.3,1) forwards;
+  }
+  @keyframes stampDown{
+    0%{ opacity: 0; transform: scale(2.6) rotate(-18deg); }
+    60%{ opacity: 1; transform: scale(0.92) rotate(-9deg); }
+    80%{ transform: scale(1.05) rotate(-11deg); }
+    100%{ opacity: 1; transform: scale(1) rotate(-10deg); }
+  }
+
+  .cert-note{
+    text-align: center;
+    margin-top: 26px;
+    font-size: clamp(10.5px, 2.8vw, 12px);
+    color: #6b6152;
+    font-style: italic;
+  }
+
+  .actions{
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 26px;
+    flex-wrap: wrap;
+  }
+  .actions .btn{
+    animation: none;
+    opacity: 1;
+    border-color: var(--gold-light);
+    color: var(--gold-light);
+  }
+  .actions .btn.secondary{
+    border-color: #7a6a4a;
+    color: #cfc6ae;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SCREEN 1: LOADING -->
+<section id="loading" class="screen active">
+  <svg class="seal-spin" viewBox="0 0 100 100" fill="none">
+    <circle cx="50" cy="50" r="46" stroke="#b8912f" stroke-width="2" stroke-dasharray="6 5"/>
+    <circle cx="50" cy="50" r="34" stroke="#d9b95c" stroke-width="1.4"/>
+    <path d="M50 20 L54 40 L50 36 L46 40 Z" fill="#d9b95c"/>
+  </svg>
+  <p class="loading-title">YETERLİLİK SINAVI</p>
+  <p class="loading-line" id="loading-line">Kayıtlar taranıyor…</p>
+  <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+</section>
+
+<!-- SCREEN 1.5: QUIZ -->
+<section id="quiz" class="screen">
+  <div class="quiz-wrap">
+    <div class="quiz-dots">
+      <span class="quiz-dot" id="dot-0"></span>
+      <span class="quiz-dot" id="dot-1"></span>
+      <span class="quiz-dot" id="dot-2"></span>
+    </div>
+    <p class="quiz-eyebrow" id="quiz-eyebrow">YETERLİLİK SINAVI · SORU 1 / 3</p>
+    <h2 class="quiz-question" id="quiz-question"></h2>
+    <div class="quiz-options" id="quiz-options"></div>
+    <p class="quiz-feedback" id="quiz-feedback"></p>
+    <button class="btn quiz-next" id="quiz-next-btn">SONRAKİ SORU</button>
+  </div>
+</section>
+
+<!-- SCREEN 2: REVEAL -->
+<section id="reveal" class="screen">
+  <canvas id="confetti-canvas"></canvas>
+  <p class="reveal-eyebrow">BAŞVURU SONUCU</p>
+  <h1 class="reveal-title">Tebrikler,<br>Hanzade!</h1>
+  <p class="reveal-sub" id="reveal-sub">Dosyanız titizlikle incelendi. Talep ettiğiniz belge onaylanmış ve mühürlenmeye hazır hâle getirilmiştir.</p>
+  <button class="btn" id="show-cert-btn">BELGEYİ GÖRÜNTÜLE</button>
+</section>
+
+<!-- SCREEN 3: CERTIFICATE -->
+<section id="certificate" class="screen">
+  <div class="cert-wrap">
+    <div class="cert-frame" id="cert-frame">
+      <span class="corner tl"></span>
+      <span class="corner tr"></span>
+      <span class="corner bl"></span>
+      <span class="corner br"></span>
+
+      <svg class="cert-emblem" viewBox="0 0 100 100" fill="none">
+        <circle cx="50" cy="50" r="44" stroke="#7a2431" stroke-width="3"/>
+        <circle cx="50" cy="50" r="34" stroke="#b8912f" stroke-width="1.5"/>
+        <path d="M50 24 L56 44 L76 44 L60 56 L66 76 L50 64 L34 76 L40 56 L24 44 L44 44 Z" fill="#7a2431"/>
+      </svg>
+
+      <p class="cert-office">AYDIN BÜYÜKŞEHİR BELEDİYESİ · HAYAT BOYU ÖĞRENME GENEL MÜDÜRLÜĞÜ<br>ŞUBE: KİŞİSEL GELİŞİM VE OFİS YAZILIMLARI</p>
+
+      <h1 class="cert-title">Kurs Bitirme Sertifikası</h1>
+      <p class="cert-subtitle">RESMÎ BELGE NO: 2026 / KAWAII-01</p>
+
+      <div class="cert-divider"></div>
+
+      <div class="cert-body">
+        <p>
+          İşbu belge,<br>
+          <span class="name">Hanzade</span>
+          adlı şahsa; bilgisayar kursu boyunca gösterdiği azim ve sabırla
+          <strong>Microsoft Office</strong> programlarını başarıyla öğrenmiş olduğunun,
+          bu süre zarfında eğitimine özveriyle devam ettiğinin tarafımızca tespiti üzerine, işbu belge takdirle düzenlenmiştir
+        </p>
+      </div>
+
+      <ul class="madde-list">
+        <li><b> —</b> <span id="cert-quiz-result">Yeterlilik sınavında 3 sorudan 3'ü doğru cevaplanmış, kurul bu başarıyı oybirliğiyle takdirle karşılamıştır.</span></li>
+        <li><b> —</b> Eğitim kapsamında Microsoft Office uygulamalarında temel yeterlilik kazanmıştır.</li>
+        <li><b> —</b> Yapılan teorik ve uygulamalı değerlendirmeler sonucunda başarı kriterlerini sağlamıştır.</li>
+        <li><b> —</b> Kurs süresince devam, disiplin ve öğrenme performansı bakımından yeterli bulunmuştur.</li>
+        <li><b> —</b> İşbu sertifika, ilgili şahsın eğitim programını başarıyla tamamladığını belgelemek amacıyla düzenlenmiştir.</li>
+      </ul>
+
+      <div class="cert-footer">
+        <div class="footer-block">
+          <div class="footer-label">DÜZENLENME TARİHİ</div>
+          <div class="footer-value" id="cert-date">—</div>
+        </div>
+        <div class="footer-block" style="text-align:center;">
+          <div class="footer-sign">Burak ÇALIŞKAN</div>
+          <div class="footer-label" style="margin-top:6px;">EĞİTİM SİSTEMLERİ MÜHENDİSİ VE ONAY MEMURU</div>
+        </div>
+        <div class="footer-block" style="text-align:right;">
+          <div class="footer-label">DURUM</div>
+          <div class="footer-value">ONAYLANDI ✓</div>
+        </div>
+      </div>
+
+      <svg class="seal" id="seal" viewBox="0 0 120 120">
+        <circle cx="60" cy="60" r="54" fill="none" stroke="#7a2431" stroke-width="3"/>
+        <circle cx="60" cy="60" r="46" fill="none" stroke="#7a2431" stroke-width="1.5" stroke-dasharray="3 4"/>
+        <path id="sealArcPath" d="M60,14 A46,46 0 1,1 59.9,14" fill="none"/>
+        <text font-size="8.6" fill="#7a2431" font-family="Special Elite, monospace" letter-spacing="2">
+          <textPath href="#sealArcPath" startOffset="2%">AYDIN BÜYÜKŞEHİR BELEDİYESİ ★ BİLGİSAYAR İŞLETMENLİĞİ KURSU ★ ONAY MÜHRÜ ★</textPath>
+        </text>
+        <text x="60" y="56" text-anchor="middle" font-size="16" fill="#7a2431" font-family="Playfair Display, serif" font-weight="900">ONAYLI</text>
+        <text x="60" y="76" text-anchor="middle" font-size="9" fill="#7a2431" font-family="Special Elite, monospace">2026</text>
+      </svg>
+
+      <p class="cert-note">Bu belge, HANZADE adlı kişinin Bilgisayar İşletmenliği / Ofis Programları kursunu başarıyla tamamladığını göstermek amacıyla düzenlenmiştir.</p>
+    </div>
+
+    <div class="actions">
+      <button class="btn" id="replay-btn">TEKRAR İZLE</button>
+    </div>
+  </div>
+</section>
+
+<script>
+(function(){
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var lines = [
+    "Kayıtlar taranıyor…",
+    "Word yeterlilik puanı hesaplanıyor…",
+    "Kurs katılım belgesi doğrulanıyor…",
+    "Emek/vakit oranı karşılaştırılıyor…",
+    "Pembe piksel etkisi göz ardı ediliyor…",
+    "Mühür hazırlanıyor…"
+  ];
+  var lineEl = document.getElementById('loading-line');
+  var fillEl = document.getElementById('progress-fill');
+  var i = 0;
+  var duration = reduced ? 800 : 3200;
+  var stepTime = duration / lines.length;
+
+  function nextLine(){
+    if(i < lines.length){
+      lineEl.textContent = lines[i];
+      fillEl.style.width = Math.round(((i+1)/lines.length)*100) + '%';
+      i++;
+      setTimeout(nextLine, stepTime);
+    } else {
+      goTo('quiz');
+      startQuiz();
+    }
+  }
+  setTimeout(nextLine, 300);
+
+  function goTo(id){
+    document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+    document.getElementById(id).classList.add('active');
+  }
+
+  // --- Quiz ---
+  var questions = [
+    {
+      q: "Word'de seçtiğin bir yazıyı kalın yapmak için ne yaparsın?",
+      options: ["Ctrl + B'ye basarım", "Ctrl + K'ya basarım", "Yazıyı büyük harfle yeniden yazarım", "Ekranı büyütürüm, yazı da büyür sanırım"],
+      correct: 0,
+      rightMsgs: ["Doğru! Belli ki gerçekten öğrenmişsin 👏", "Kesinlikle — kursun parası hak edilmiş."],
+      wrongMsgs: ["Yanlış ama o kadar kararlıydın ki puan veriyoruz 😂", "Aslında değil, ama bu özgüvene diyecek yok."]
+    },
+    {
+      q: "Excel'de A1'den A10'a kadar olan sayıları toplamak için ne yazarsın?",
+      options: ["=TOPLA(A1:A10)", "Hesap makinesi açıp elle toplarım", "=BÜYÜ(A1:A10)", "A1'e bakıp tahmin yürütürüm"],
+      correct: 0,
+      rightMsgs: ["Doğru! Formül biliyorsun, resmiyet kazandın.", "Tam isabet, kurul çok etkilendi."],
+      wrongMsgs: ["Yanlış! Ama hesap makinesi de bir teknolojidir, kabul.", "Olmadı ama niyet güzeldi 😄"]
+    },
+    {
+      q: "PowerPoint'te slaytlar arasına geçiş efekti eklemek için hangi sekmeye gidersin?",
+      options: ["Geçişler sekmesine", "Slaydı elle sallayarak geçerim", "WordArt menüsüne", "Hiçbir yere, PDF'e çeviririm kurtulurum"],
+      correct: 0,
+      rightMsgs: ["Doğru! Sunum kariyerin parlıyor.", "Aynen öyle, tebrikler."],
+      wrongMsgs: ["Yanlış ama PDF'e çevirmek de bir strateji sayılır.", "Olmadı, ama yaratıcılığın takdire şayan."]
+    }
+  ];
+  var quizIndex = 0;
+  var quizScore = 0;
+
+  function startQuiz(){
+    quizIndex = 0;
+    quizScore = 0;
+    renderQuestion();
+  }
+
+  function renderQuestion(){
+    var data = questions[quizIndex];
+    document.getElementById('quiz-eyebrow').textContent = 'YETERLİLİK SINAVI · SORU ' + (quizIndex+1) + ' / 3';
+    document.getElementById('quiz-question').textContent = data.q;
+
+    for(var d = 0; d < 3; d++){
+      var dot = document.getElementById('dot-'+d);
+      dot.classList.remove('done','current');
+      if(d < quizIndex) dot.classList.add('done');
+      if(d === quizIndex) dot.classList.add('current');
+    }
+
+    var optsWrap = document.getElementById('quiz-options');
+    optsWrap.innerHTML = '';
+    var feedback = document.getElementById('quiz-feedback');
+    feedback.textContent = '';
+    feedback.classList.remove('show');
+    var nextBtn = document.getElementById('quiz-next-btn');
+    nextBtn.classList.remove('show');
+    nextBtn.onclick = null;
+
+    data.options.forEach(function(optText, idx){
+      var b = document.createElement('button');
+      b.className = 'quiz-option';
+      b.textContent = optText;
+      b.addEventListener('click', function(){
+        var buttons = optsWrap.querySelectorAll('.quiz-option');
+        buttons.forEach(function(btn){ btn.disabled = true; });
+
+        var isCorrect = idx === data.correct;
+        b.classList.add(isCorrect ? 'correct' : 'wrong');
+        if(!isCorrect){
+          buttons[data.correct].classList.add('correct');
+        } else {
+          quizScore++;
+        }
+
+        var msgs = isCorrect ? data.rightMsgs : data.wrongMsgs;
+        feedback.textContent = msgs[Math.floor(Math.random()*msgs.length)];
+        feedback.classList.add('show');
+
+        nextBtn.textContent = (quizIndex === questions.length - 1) ? 'SONUCU GÖR' : 'SONRAKİ SORU';
+        nextBtn.classList.add('show');
+        nextBtn.onclick = function(){
+          quizIndex++;
+          if(quizIndex < questions.length){
+            renderQuestion();
+          } else {
+            finishQuiz();
+          }
+        };
+      });
+      optsWrap.appendChild(b);
+    });
+  }
+
+  function finishQuiz(){
+    for(var d = 0; d < 3; d++){
+      document.getElementById('dot-'+d).classList.add('done');
+    }
+
+    var subEl = document.getElementById('reveal-sub');
+    var certEl = document.getElementById('cert-quiz-result');
+    if(quizScore === 3){
+      subEl.textContent = '3 sorudan 3\'ünü doğru bilerek başvurunu fazlasıyla hak ettin. Belgen mühürlenmeye hazır.';
+      certEl.textContent = 'Yeterlilik sınavında 3 sorudan 3\'ü doğru cevaplanmış, kurul bu başarıyı oybirliğiyle takdirle karşılamıştır.';
+    } else if(quizScore > 0){
+      subEl.textContent = '3 sorudan ' + quizScore + '\'ini doğru bildin, gerisini de aramızda hallettik. Belgen onaylandı.';
+      certEl.textContent = 'Yeterlilik sınavında 3 sorudan ' + quizScore + '\'i doğru cevaplanmış, kalan kısım kurul inisiyatifiyle affa uğramıştır.';
+    } else {
+      subEl.textContent = '3 sorudan hiçbirini doğru bilemedin ama o kararlılık bile tek başına bir belgeyi hak ediyor.';
+      certEl.textContent = 'Yeterlilik sınavında 3 sorudan hiçbiri doğru cevaplanamamış, ancak kurul azim payını dikkate alarak belgeyi oybirliğiyle onaylamıştır.';
+    }
+
+    goTo('reveal');
+    launchConfetti();
+  }
+
+  document.getElementById('show-cert-btn').addEventListener('click', function(){
+    goTo('certificate');
+    var d = new Date();
+    var months = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+    document.getElementById('cert-date').textContent = d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+
+    var frame = document.getElementById('cert-frame');
+    var seal = document.getElementById('seal');
+    requestAnimationFrame(function(){
+      frame.classList.add('show');
+      setTimeout(function(){ seal.classList.add('stamp'); }, reduced ? 50 : 550);
+    });
+  });
+
+  document.getElementById('replay-btn').addEventListener('click', function(){
+    document.getElementById('cert-frame').classList.remove('show');
+    document.getElementById('seal').classList.remove('stamp');
+    fillEl.style.width = '0%';
+    i = 0;
+    goTo('loading');
+    setTimeout(nextLine, 300);
+  });
+
+  // --- Confetti ---
+  function launchConfetti(){
+    if(reduced) return;
+    var canvas = document.getElementById('confetti-canvas');
+    var ctx = canvas.getContext('2d');
+    function resize(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    resize();
+    window.addEventListener('resize', resize);
+
+    var colors = ['#b8912f', '#d9b95c', '#7a2431', '#f3ecda', '#4b5e45'];
+    var pieces = [];
+    var count = window.innerWidth < 500 ? 60 : 110;
+    for(var p = 0; p < count; p++){
+      pieces.push({
+        x: Math.random() * canvas.width,
+        y: -20 - Math.random() * canvas.height * 0.5,
+        w: 5 + Math.random() * 5,
+        h: 8 + Math.random() * 6,
+        color: colors[Math.floor(Math.random()*colors.length)],
+        speed: 2 + Math.random() * 3,
+        drift: (Math.random() - 0.5) * 2,
+        rot: Math.random() * Math.PI,
+        rotSpeed: (Math.random() - 0.5) * 0.2
+      });
+    }
+
+    var frames = 0;
+    var maxFrames = 260;
+    function draw(){
+      ctx.clearRect(0,0,canvas.width, canvas.height);
+      pieces.forEach(function(pc){
+        pc.y += pc.speed;
+        pc.x += pc.drift;
+        pc.rot += pc.rotSpeed;
+        ctx.save();
+        ctx.translate(pc.x, pc.y);
+        ctx.rotate(pc.rot);
+        ctx.fillStyle = pc.color;
+        ctx.fillRect(-pc.w/2, -pc.h/2, pc.w, pc.h);
+        ctx.restore();
+      });
+      frames++;
+      if(frames < maxFrames){
+        requestAnimationFrame(draw);
+      } else {
+        ctx.clearRect(0,0,canvas.width, canvas.height);
+      }
+    }
+    draw();
+  }
+})();
+</script>
+</body>
+</html>
+
